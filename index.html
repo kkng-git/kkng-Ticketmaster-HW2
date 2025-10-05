@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ticketmaster HW2 - Hello World</title>
+  </head>
+  <body>
+    <main>
+      <h1>Ticketmaster HW2</h1>
+      <p id="message">Click the button to run the helloWorld function.</p>
+      <button id="runBtn">Run helloWorld</button>
+    </main>
+
+    <script src="scripts.js"></script>
+    <script>
+      // Use the helloWorld function from scripts.js
+      document.getElementById('runBtn').addEventListener('click', function() {
+        const msg = helloWorld();
+        document.getElementById('message').textContent = msg;
+      });
+    </script>
+  </body>
+</html>
