@@ -167,7 +167,9 @@
         </form>
       </div>
       <!-- Results will be rendered here -->
-      <div id="results" style="max-width:640px;margin:1rem auto;color:#fff;"></div>
+  <div id="results" style="max-width:640px;margin:1rem auto;color:#fff;" hidden aria-hidden="true"></div>
+  <!-- Event details panel -->
+  <div id="event-details" style="max-width:640px;margin:1rem auto;color:#fff;" hidden aria-hidden="true"></div>
     </main>
 
     <script src="search.js"></script>
@@ -181,13 +183,15 @@
         function updateLocationState() {
           if (!autoDetect || !locationBlock || !locationInput) return;
           if (autoDetect.checked) {
-            // hide and disable requirement
-            locationBlock.style.display = 'none';
+            // hide via DOM API and disable requirement (accessibility attributes updated)
+            locationBlock.hidden = true;
+            locationBlock.setAttribute('aria-hidden', 'true');
             locationInput.required = false;
             locationInput.value = '';
           } else {
-            // show and make required
-            locationBlock.style.display = '';
+            // show via DOM API and make required (accessibility attributes updated)
+            locationBlock.hidden = false;
+            locationBlock.setAttribute('aria-hidden', 'false');
             locationInput.required = true;
           }
         }
@@ -211,12 +215,14 @@
 
         // Ensure Clear button fully resets state (uncheck auto-detect, show location, set required)
         const clearBtn = document.getElementById('clearBtn');
-        if (clearBtn) {
+          if (clearBtn) {
           clearBtn.addEventListener('click', function () {
             // Let the browser perform the form reset first, then fix UI state
-            setTimeout(function () {
+              setTimeout(function () {
               if (autoDetect) autoDetect.checked = false;
               updateLocationState();
+              // Use the central clearRenders (if present) to clear all render targets
+              try { if (typeof window.clearRenders === 'function') window.clearRenders(); } catch (e) {}
             }, 0);
           });
         }

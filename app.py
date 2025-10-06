@@ -18,6 +18,8 @@ import helpers
 import json
 
 TICKETMASTER_EVENT_SEARCH_API = "https://app.ticketmaster.com/discovery/v2/events.json"
+TICKETMASTER_EVENT_DETAILS_API = "https://app.ticketmaster.com/discovery/v2/events/"
+TICKETMASTER_VENUE_DETAILS_API = "https://app.ticketmaster.com/discovery/v2/venues"
 TICKETMASTER_API_KEY = "5DjQ1fn5mV9sWLYrsG0i8iWOzlgxcO4l"
 
 app = Flask(__name__)
@@ -138,6 +140,88 @@ def eventSearch():
 
     print(json.dumps(body, indent=4, sort_keys=True))
     return jsonify({'ticketmaster': body}), tm_resp.status_code
+
+@app.route('/api/eventDetails', methods=['GET'])
+def eventDetails():
+    """Fetch event details from Ticketmaster by event id.
+
+    Accepts a query parameter `id` or a JSON body with key `id`.
+    Calls: https://app.ticketmaster.com/discovery/v2/events/{id}?apikey=...
+    Returns the parsed JSON response from Ticketmaster (wrapped under key 'ticketmaster').
+    """
+    payload = {}
+    if request.is_json:
+        payload = request.get_json()
+    else:
+        payload = request.args.to_dict()
+
+    # Support both 'id' and 'eventId' keys
+    event_id = payload.get('id') or payload.get('eventId')
+    if not event_id:
+        return jsonify({'error': 'missing id parameter'}), 400
+
+    # Build Ticketmaster details URL
+    url = f"{TICKETMASTER_EVENT_DETAILS_API}{event_id}"
+    params = {'apikey': TICKETMASTER_API_KEY}
+
+    try:
+        resp = requests.get(url, params=params, timeout=10)
+    except requests.RequestException as exc:
+        return jsonify({'error': 'ticketmaster request failed', 'details': str(exc)}), 502
+
+    try:
+        body = resp.json()
+    except Exception:
+        return jsonify({'error': 'ticketmaster returned non-json', 'status_code': resp.status_code}), resp.status_code
+
+    # Optionally print for debugging (keeps consistency with eventSearch)
+    try:
+        print(json.dumps(body, indent=4, sort_keys=True))
+    except Exception:
+        pass
+
+    return jsonify({'ticketmaster': body}), resp.status_code
+
+@app.route('/api/venueDetails', methods=['GET'])
+def venueDetails():
+    """Fetch venue details from Ticketmaster by keyword.
+
+    Accepts a query parameter `keyword` or a JSON body with key `keyword`.
+    Calls: https://app.ticketmaster.com/discovery/v2/venues?apikey=...&keyword=...
+    Returns the parsed JSON response from Ticketmaster (wrapped under key 'ticketmaster').
+    """
+    payload = {}
+    if request.is_json:
+        payload = request.get_json()
+    else:
+        payload = request.args.to_dict()
+
+    keyword = payload.get('keyword')
+    if not keyword:
+        return jsonify({'error': 'missing keyword parameter'}), 400
+
+    params = {
+        'apikey': TICKETMASTER_API_KEY,
+        'keyword': keyword
+    }
+
+    try:
+        resp = requests.get(TICKETMASTER_VENUE_DETAILS_API, params=params, timeout=10)
+    except requests.RequestException as exc:
+        return jsonify({'error': 'ticketmaster request failed', 'details': str(exc)}), 502
+
+    try:
+        body = resp.json()
+    except Exception:
+        return jsonify({'error': 'ticketmaster returned non-json', 'status_code': resp.status_code}), resp.status_code
+
+    # Optionally print for debugging
+    try:
+        print(json.dumps(body, indent=4, sort_keys=True))
+    except Exception:
+        pass
+
+    return jsonify({'ticketmaster': body}), resp.status_code
 
 if __name__ == '__main__':
     app.run(debug=True, host='127.0.0.1', port=5000)
