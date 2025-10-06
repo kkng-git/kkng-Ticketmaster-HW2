@@ -13,6 +13,12 @@ python app.py
 """
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+import requests
+import helpers
+import json
+
+TICKETMASTER_EVENT_SEARCH_API = "https://app.ticketmaster.com/discovery/v2/events.json"
+TICKETMASTER_API_KEY = "5DjQ1fn5mV9sWLYrsG0i8iWOzlgxcO4l"
 
 app = Flask(__name__)
 CORS(app)
@@ -34,6 +40,104 @@ def api_search():
             data['autoDetect'] = data['autoDetect'] in ('on', 'true', '1')
     # Echo back the received data for testing
     return jsonify({'received': data}), 200
+
+
+@app.route('/api/eventSearch', methods=['GET'])
+def eventSearch():
+    """Accept query parameters or JSON body with the following fields:
+    - latitude (float)
+    - longitude (float)
+    - distance (int)
+    - segmentId (str)
+    - keyword (str)
+
+    The handler will prefer JSON body if provided; otherwise it will
+    look at query parameters. It validates types and returns a JSON
+    object with the parsed values or an error with 400 status.
+    """
+    # Prefer JSON body if present
+    payload = {}
+    if request.is_json:
+        payload = request.get_json()
+    else:
+        # Pull from query params
+        payload = request.args.to_dict()
+
+    errors = []
+
+    # helper to parse numeric types
+    def _parse_float(key):
+        v = payload.get(key)
+        if v is None:
+            errors.append(f"missing {key}")
+            return None
+        try:
+            return float(v)
+        except Exception:
+            errors.append(f"{key} must be a float")
+            return None
+
+    def _parse_int(key):
+        v = payload.get(key)
+        if v is None:
+            errors.append(f"missing {key}")
+            return None
+        try:
+            return int(v)
+        except Exception:
+            errors.append(f"{key} must be an int")
+            return None
+
+    def _parse_str(key, required=True):
+        v = payload.get(key)
+        if v is None:
+            if required:
+                errors.append(f"missing {key}")
+            return None
+        return str(v)
+
+    lat = _parse_float('latitude')
+    lng = _parse_float('longitude')
+    distance = _parse_int('distance')
+    # segmentId is optional now
+    segmentId = _parse_str('segmentId', required=False)
+    keyword = _parse_str('keyword')
+
+    if errors:
+        return jsonify({'errors': errors}), 400
+
+    # Build geohash using helpers.geohashHelper (expects lng, lat)
+    try:
+        geo_point = helpers.geohashHelper(lng, lat)
+        # print(geo_point)
+    except Exception as exc:
+        return jsonify({'error': 'failed to compute geohash', 'details': str(exc)}), 500
+
+    params = {
+        'apikey': TICKETMASTER_API_KEY,
+        'keyword': keyword,
+        'radius': distance,
+        'unit': 'miles',
+        'geoPoint': geo_point,
+    }
+    # Include segmentId only if provided
+    if segmentId:
+        params['segmentId'] = segmentId
+
+    try:
+        tm_resp = requests.get(TICKETMASTER_EVENT_SEARCH_API, params=params, timeout=10)
+    except requests.RequestException as exc:
+        return jsonify({'error': 'ticketmaster request failed', 'details': str(exc)}), 502
+
+    # Try to return the JSON body from Ticketmaster, preserve status code
+    try:
+        body = tm_resp.json()
+    except Exception:
+        # Non-JSON response
+        return jsonify({'error': 'ticketmaster returned non-json', 'status_code': tm_resp.status_code}), tm_resp.status_code
+
+    print(json.dumps(body, indent=4, sort_keys=True))
+    return jsonify({'ticketmaster': body}), tm_resp.status_code
 
 if __name__ == '__main__':
     app.run(debug=True, host='127.0.0.1', port=5000)

@@ -3,3 +3,5 @@
 
 Flask
 Flask-Cors
+d-geolib
+requests
