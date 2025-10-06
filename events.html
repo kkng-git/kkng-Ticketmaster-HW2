@@ -3,22 +3,222 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Ticketmaster HW2 - Hello World</title>
+    <title>Events Search</title>
+    <style>
+      /* Page background */
+      body {
+        font-family: Arial, sans-serif;
+        padding: 1rem;
+        background: url("../images/background.jpg") no-repeat center center fixed;
+        background-size: cover;
+        color: #fff;
+      }
+
+      /* Centered dark translucent panel */
+      .form-panel {
+        max-width: 640px;
+        margin: 2.25rem auto;
+        background: rgba(24,24,24,0.7);
+        padding: 1.5rem 1.75rem 1.75rem 1.75rem;
+        border-radius: 10px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+        backdrop-filter: blur(4px);
+      }
+
+      /* Title area */
+      .panel-title {
+        text-align: center;
+        font-family: 'Georgia', 'Times New Roman', serif;
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0 0 0.5rem 0;
+        color: #eee;
+      }
+      .title-hr {
+        height: 2px;
+        background: rgba(255,255,255,0.12);
+        margin-bottom: 1rem;
+        border: none;
+      }
+
+      form { max-width: 600px; margin: 0 auto; }
+      label { display: block; margin-top: 0.5rem; color: #3ec0b3; font-weight: 600; font-size: 0.9rem; }
+      .required { color: #ff4d4d; margin-left: 0.3rem; }
+
+      /* Inputs */
+      input[type="text"], input[type="number"] {
+        width: 100%;
+        padding: 0.55rem 0.6rem;
+        margin-top: 0.35rem;
+        box-sizing: border-box;
+        background: rgba(255,255,255,0.07);
+        border: 1px solid rgba(255,255,255,0.18);
+        color: #fff;
+        border-radius: 6px;
+        outline: none;
+      }
+      select {
+        width: 100%;
+        padding: 0.55rem 0.6rem;
+        margin-top: 0.35rem;
+        box-sizing: border-box;
+        background: rgba(255,255,255,0.07); /* match text inputs */
+        border: 1px solid rgba(255,255,255,0.18);
+        color: #fff;
+        border-radius: 6px;
+        outline: none;
+        appearance: none; -webkit-appearance: none; -moz-appearance: none;
+        background-image: linear-gradient(45deg, transparent 50%, rgba(255,255,255,0.9) 50%), linear-gradient(135deg, rgba(255,255,255,0.9) 50%, transparent 50%);
+        background-position: calc(100% - 18px) calc(1em + 2px), calc(100% - 13px) calc(1em + 2px);
+        background-size: 6px 6px, 6px 6px;
+        background-repeat: no-repeat;
+      }
+
+      /* Dropdown options styling where supported */
+      select option {
+        background: #fff;
+        color: #000;
+      }
+      input::placeholder { color: rgba(255,255,255,0.55); }
+      select { color: #fff; }
+      input:focus, select:focus { box-shadow: 0 0 0 3px rgba(62,192,179,0.08); border-color: rgba(62,192,179,0.9); }
+
+      /* Two-column row for Distance and Category */
+      .row { display:flex; gap:1rem; }
+      .col { flex:1; }
+
+  /* Auto-detect checkbox inline next to the Location label */
+  .location-label-row { display:flex; align-items:center; gap:0.6rem; margin-top:0.25rem; }
+  .location-label-row .autodetect-inline { display:inline-flex; align-items:center; gap:0.25rem; white-space:nowrap; }
+  .location-label-row input[type="checkbox"] { width:16px; height:16px; }
+  .location-block input[type="text"] { margin-top:0.35rem; }
+
+      /* Buttons */
+      .buttons { display:flex; gap:0.75rem; margin-top:1rem; }
+      .btn {
+        padding: 0.55rem 1.1rem;
+        border-radius: 8px;
+        border: 2px solid transparent;
+        font-weight:700;
+        cursor: pointer;
+      }
+      .btn-search {
+        background: linear-gradient(180deg,#ff7a00,#ff5a00);
+        color: #fff;
+        border-color: rgba(255,255,255,0.18);
+        box-shadow: 0 6px 16px rgba(255,90,30,0.18);
+      }
+      .btn-clear {
+        background: linear-gradient(180deg,#4963e6,#3b50d6);
+        color: #fff;
+        border-color: rgba(255,255,255,0.12);
+        box-shadow: 0 6px 16px rgba(59,80,214,0.12);
+      }
+
+      /* Small adjustments for mobile */
+      @media (max-width:520px){
+        .row{flex-direction:column}
+        .buttons{flex-direction:column}
+      }
+    </style>
   </head>
   <body>
     <main>
-      <h1>Ticketmaster HW2</h1>
-      <p id="message">Click the button to run the helloWorld function.</p>
-      <button id="runBtn">Run helloWorld</button>
+      <div class="form-panel">
+        <div class="panel-title">Events Search</div>
+        <hr class="title-hr" />
+        <form id="eventsForm" onsubmit="return false;">
+          <label for="keyword">Keyword<span class="required">*</span></label>
+          <input id="keyword" name="keyword" type="text" required aria-required="true" />
+
+          <div class="row">
+            <div class="col">
+              <label for="distance">Distance(miles)</label>
+              <input id="distance" name="distance" type="number" placeholder="10" inputmode="numeric" min="0" />
+            </div>
+            <div class="col">
+              <label for="category">Category<span class="required">*</span></label>
+              <select id="category" name="category">
+                <option value="default">Default</option>
+                <option value="music">Music</option>
+                <option value="sports">Sports</option>
+                <option value="arts">Arts & Theatre</option>
+                <option value="film">Film</option>
+                <option value="miscellaneous">Miscellaneous</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="location-label-row">
+            <label for="location">Location<span class="required">*</span></label>
+            <label class="autodetect-inline" for="autoDetect">
+              <input id="autoDetect" name="autoDetect" type="checkbox" />
+              <span style="color:#fff; opacity:0.9;">Auto-Detect Location</span>
+            </label>
+          </div>
+          <div class="location-block">
+            <input id="location" name="location" type="text" required aria-required="true" />
+          </div>
+
+          <div class="buttons">
+            <button id="searchBtn" class="btn btn-search" type="button">SEARCH</button>
+            <button id="clearBtn" class="btn btn-clear" type="reset">CLEAR</button>
+          </div>
+        </form>
+      </div>
     </main>
 
     <script src="search.js"></script>
     <script>
-      // Use the helloWorld function from scripts.js
-      document.getElementById('runBtn').addEventListener('click', function() {
-        const msg = helloWorld();
-        document.getElementById('message').textContent = msg;
-      });
+      // Toggle location input visibility and required state when Auto-Detect is changed
+      (function(){
+        const autoDetect = document.getElementById('autoDetect');
+        const locationBlock = document.querySelector('.location-block');
+        const locationInput = document.getElementById('location');
+
+        function updateLocationState() {
+          if (!autoDetect || !locationBlock || !locationInput) return;
+          if (autoDetect.checked) {
+            // hide and disable requirement
+            locationBlock.style.display = 'none';
+            locationInput.required = false;
+            locationInput.value = '';
+          } else {
+            // show and make required
+            locationBlock.style.display = '';
+            locationInput.required = true;
+          }
+        }
+
+        // Initialize immediately
+        updateLocationState();
+
+        // Listen for changes
+        if (autoDetect) {
+          autoDetect.addEventListener('change', updateLocationState);
+        }
+
+        // Bind the search button
+        document.getElementById('searchBtn').addEventListener('click', function () {
+          if (typeof handleSearch === 'function') {
+            handleSearch();
+          } else {
+            console.error('handleSearch is not defined in search.js');
+          }
+        });
+
+        // Ensure Clear button fully resets state (uncheck auto-detect, show location, set required)
+        const clearBtn = document.getElementById('clearBtn');
+        if (clearBtn) {
+          clearBtn.addEventListener('click', function () {
+            // Let the browser perform the form reset first, then fix UI state
+            setTimeout(function () {
+              if (autoDetect) autoDetect.checked = false;
+              updateLocationState();
+            }, 0);
+          });
+        }
+      })();
     </script>
   </body>
 </html>

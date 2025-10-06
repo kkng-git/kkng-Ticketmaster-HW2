@@ -1,0 +1,5 @@
+# Requirements for kkng-Ticketmaster-HW2
+# Install with: pip install -r requirements.txt
+
+Flask
+Flask-Cors
