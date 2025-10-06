@@ -6,6 +6,19 @@ API_URL = "http://127.0.0.1:5000";
 GOOGLE_URL = 'https://maps.googleapis.com/maps/api/geocode/json';
 // NOTE: This file contains a key from the workspace. In production keep keys secret.
 GOOGLE_KEY = "AIzaSyD4n3FMcMZcX3-WEqoN_EtwWxbHelJZ-0Y";
+IPINFO_TOKEN = "a9fbeef1a25b07";
+IPINFO_URL = "https://ipinfo.io/?token="+IPINFO_TOKEN;
+
+// Helper to show/hide elements using DOM properties (keeps aria-hidden in sync)
+function setVisible(el, visible) {
+  if (!el) return;
+  try {
+    el.hidden = !visible;
+    el.setAttribute('aria-hidden', visible ? 'false' : 'true');
+  } catch (e) {
+    // ignore
+  }
+}
 
 /**
  * Geocode an address using Google Maps Geocoding API.
@@ -66,8 +79,35 @@ async function handleSearch() {
     formDetails.distance = Number.isFinite(n) ? n : formDetails.distance;
   }
 
-  // If we have a location string, attempt to geocode it and attach lat/lng
-  if (formDetails.location) {
+  // If auto-detect is checked, ask IP info for approximate location and attach lat/lng.
+  // Otherwise, if the user supplied a location string, geocode it as before.
+  if (formDetails.autoDetect) {
+    try {
+      const resp = await fetch(IPINFO_URL, { method: 'GET' });
+      if (resp && resp.ok) {
+        const data = await resp.json();
+        if (data && data.loc) {
+          // data.loc is expected to be "<lat>,<lng>" (may include spaces)
+          const parts = String(data.loc).split(',').map(s => s.trim());
+          const lat = parseFloat(parts[0]);
+          const lng = parseFloat(parts[1]);
+          if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+            formDetails.latitude = lat;
+            formDetails.longitude = lng;
+          } else {
+            console.warn('IPInfo returned invalid loc value', data.loc);
+          }
+        } else {
+          console.warn('IPInfo response missing loc', data);
+        }
+      } else {
+        const txt = resp ? await resp.text() : 'no response';
+        console.warn('IPInfo request failed', resp && resp.status, txt);
+      }
+    } catch (err) {
+      console.error('Error fetching IPInfo', err);
+    }
+  } else if (formDetails.location) {
     const coords = await geocodeAddress(formDetails.location);
     if (coords) {
       formDetails.latitude = coords.lat;
@@ -125,14 +165,13 @@ function renderResults(events) {
   // Clear previous
   container.innerHTML = '';
   // ensure visible
-  container.hidden = false;
-  container.setAttribute('aria-hidden', 'false');
+  setVisible(container, true);
 
   if (!events || events.length === 0) {
     container.innerHTML = '<div style="padding:1rem;background:rgba(0,0,0,0.45);border-radius:8px;text-align:center;">No Results</div>';
-    // ensure details panel hidden when no results
-    const details = document.getElementById('event-details');
-    if (details) { details.hidden = true; details.setAttribute('aria-hidden','true'); details.innerHTML = ''; }
+  // ensure details panel hidden when no results
+  const details = document.getElementById('event-details');
+  if (details) { setVisible(details, false); details.innerHTML = ''; }
     return;
   }
 
@@ -240,9 +279,19 @@ function renderResults(events) {
 async function fetchEventDetails(eventId) {
   const detailsContainer = document.getElementById('event-details');
   if (!detailsContainer) return;
-  detailsContainer.innerHTML = '<div style="padding:1rem;background:rgba(0,0,0,0.45);border-radius:8px;">Loading...</div>';
-  detailsContainer.hidden = false;
-  detailsContainer.setAttribute('aria-hidden', 'false');
+  // Hide and clear any existing details/venue renders before rendering new ones
+  try {
+    // hide existing details panel
+    setVisible(detailsContainer, false);
+    detailsContainer.innerHTML = '';
+    // remove external venue control if present
+    const existingExternal = document.getElementById('external-venue-details');
+    if (existingExternal) existingExternal.remove();
+  } catch (e) {}
+
+  // show loading state for the new details
+  detailsContainer.innerHTML = `<div style="padding:1rem;background:rgba(0,0,0,0.45);border-radius:8px;">Loading...</div>`;
+  setVisible(detailsContainer, true);
   try {
     const url = `${API_URL}/api/eventDetails?id=${encodeURIComponent(eventId)}`;
     const resp = await fetch(url, { method: 'GET' });
@@ -364,8 +413,7 @@ async function fetchEventDetails(eventId) {
       </div>
     `;
     detailsContainer.innerHTML = html;
-    detailsContainer.hidden = false;
-    detailsContainer.setAttribute('aria-hidden', 'false');
+  setVisible(detailsContainer, true);
     // Remove any existing external venue-details-control to avoid duplicates
     const existingExternal = document.getElementById('external-venue-details');
     if (existingExternal) existingExternal.remove();
@@ -457,7 +505,10 @@ async function fetchVenueDetails(venueName) {
   venueHtml += '<div style="width:2px;background:#bdbdbd;border-radius:2px;align-self:stretch;box-shadow:inset 0 0 4px rgba(0,0,0,0.06);"></div>';
 
   // Right column: 'More events at this venue' (centered within its column)
-  const moreHref = `https://www.ticketmaster.com/search?q=${encodeURIComponent(vname)}`;
+  // Prefer direct venue page URL when available from Ticketmaster response
+  let moreHref = `https://www.ticketmaster.com/search?q=${encodeURIComponent(vname)}`;
+  if (v && v.url) moreHref = v.url;
+  else if (v && v._links && v._links.self && v._links.self.href) moreHref = v._links.self.href;
   // Make this a flexible column so divider remains centered; content is centered in its column
   venueHtml += '<div style="flex:1;max-width:220px;display:flex;align-items:center;justify-content:center;padding-right:12px;">';
     venueHtml += `<div style="text-align:center;"><a href="${moreHref}" target="_blank" style="color:#1976d2;">More events at this venue</a></div>`;
@@ -492,10 +543,10 @@ document.addEventListener('click', function (e) {
 // Clear all rendered content: results panel, event details, venue details and external control
 window.clearRenders = function () {
   try {
-    const results = document.getElementById('results');
-    if (results) { results.innerHTML = ''; results.hidden = true; results.setAttribute('aria-hidden','true'); }
-    const details = document.getElementById('event-details');
-    if (details) { details.innerHTML = ''; details.hidden = true; details.setAttribute('aria-hidden','true'); }
+  const results = document.getElementById('results');
+  if (results) { results.innerHTML = ''; setVisible(results, false); }
+  const details = document.getElementById('event-details');
+  if (details) { details.innerHTML = ''; setVisible(details, false); }
     const venueContent = document.getElementById('venue-details-content');
     if (venueContent) { venueContent.innerHTML = ''; }
     const external = document.getElementById('external-venue-details');

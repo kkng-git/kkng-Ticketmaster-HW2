@@ -183,15 +183,13 @@
         function updateLocationState() {
           if (!autoDetect || !locationBlock || !locationInput) return;
           if (autoDetect.checked) {
-            // hide via DOM API and disable requirement (accessibility attributes updated)
-            locationBlock.hidden = true;
-            locationBlock.setAttribute('aria-hidden', 'true');
+            // hide via helper and disable requirement (accessibility attributes updated)
+            try { if (typeof setVisible === 'function') setVisible(locationBlock, false); else { locationBlock.hidden = true; locationBlock.setAttribute('aria-hidden','true'); } } catch(e){}
             locationInput.required = false;
             locationInput.value = '';
           } else {
-            // show via DOM API and make required (accessibility attributes updated)
-            locationBlock.hidden = false;
-            locationBlock.setAttribute('aria-hidden', 'false');
+            // show via helper and make required (accessibility attributes updated)
+            try { if (typeof setVisible === 'function') setVisible(locationBlock, true); else { locationBlock.hidden = false; locationBlock.setAttribute('aria-hidden','false'); } } catch(e){}
             locationInput.required = true;
           }
         }
