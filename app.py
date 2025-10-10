@@ -25,6 +25,19 @@ TICKETMASTER_API_KEY = "5DjQ1fn5mV9sWLYrsG0i8iWOzlgxcO4l"
 app = Flask(__name__)
 CORS(app)
 
+@app.route('/home')
+def homepage():
+    return app.send_static_file("events.html")
+    #return app.send_from_directory("/static")
+
+@app.route('/search.js')
+def searchJS():
+    return app.send_static_file("search.js")
+
+@app.route('/images/background.jpg')
+def backgroundImage():
+    return app.send_static_file("images/background.jpg")
+
 @app.route('/health', methods=['GET'])
 def health():
     return jsonify({'status': 'ok'}), 200
@@ -138,7 +151,7 @@ def eventSearch():
         # Non-JSON response
         return jsonify({'error': 'ticketmaster returned non-json', 'status_code': tm_resp.status_code}), tm_resp.status_code
 
-    print(json.dumps(body, indent=4, sort_keys=True))
+    # print(json.dumps(body, indent=4, sort_keys=True))
     return jsonify({'ticketmaster': body}), tm_resp.status_code
 
 @app.route('/api/eventDetails', methods=['GET'])
@@ -224,4 +237,4 @@ def venueDetails():
     return jsonify({'ticketmaster': body}), resp.status_code
 
 if __name__ == '__main__':
-    app.run(debug=True, host='127.0.0.1', port=5000)
+    app.run(debug=True, host='127.0.0.1', port=8080)

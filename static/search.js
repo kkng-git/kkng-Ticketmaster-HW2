@@ -1,7 +1,10 @@
 // search.js
 // Contains handlers for the Events Search form
 
-API_URL = "http://127.0.0.1:5000";
+// API_URL: prefer same-origin when deployed (App Engine or similar). Fall back to localhost:5000 for local dev.
+const API_URL = (typeof window !== 'undefined' && window.location && window.location.origin && window.location.origin !== 'null')
+  ? window.location.origin
+  : 'http://127.0.0.1:8080';
 // Google Geocoding API URL
 GOOGLE_URL = 'https://maps.googleapis.com/maps/api/geocode/json';
 // NOTE: This file contains a key from the workspace. In production keep keys secret.
